@@ -2,8 +2,6 @@
 
 ## Steps to run
 
-1. Configure environment variables in the sidebar
+1. Configure environment variables
 
-2. Add new terminal to sandbox
-
-3. Run `yarn icons` in the terminal
+2. Run `yarn icons` in the terminal
