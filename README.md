@@ -1,4 +1,4 @@
-# ICONS GENERATOR
+# Icons Generator
 
 ## Steps to run
 
