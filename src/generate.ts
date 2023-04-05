@@ -67,7 +67,7 @@ exporter
     fs.rmSync(ICONS_DIRECTORY_PATH, { recursive: true, force: true }); // remove all old icons
     allSVGs.forEach((svg) => {
       const svgCode = svg.data;
-      const [_, size, artboardName] = svg.name.match(/Size=([^ ]+).*?Type=(.*)$/i);
+      const [_, size, artboardName] = svg.name.match(/Size=([^ ]+).*?Type=(.*)$/i); // Get `Type` and `Size` from, example: `Size=Small (16px), Type=Download`
 
       const sizes = {
         Small: 16,
@@ -84,7 +84,7 @@ exporter
         }
       };
 
-      const componentName = toPascalCase(`${artboardName} ${size}`);
+      const componentName = toPascalCase(`${artboardName} ${size}`); // rename from e.g. `Size=Small (16px), Type=Download` -> `DownloadSmall`
       const componentFileName = `${componentName}.tsx`;
 
       // Converts SVG code into React code using SVGR library

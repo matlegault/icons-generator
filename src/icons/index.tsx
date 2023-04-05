@@ -1,3 +1,7 @@
+// -----------------------------------------------------
+// This is a generated index file. Do not edit manually.
+// -----------------------------------------------------
+
 export {default as AppBridgeMedium} from './components/AppBridgeMedium';
 export {default as AppBridgeSmall} from './components/AppBridgeSmall';
 export {default as AvailabilityMedium} from './components/AvailabilityMedium';
@@ -57,6 +61,7 @@ export {default as GitHubLarge} from './components/GitHubLarge';
 export {default as GitHubMedium} from './components/GitHubMedium';
 export {default as GitHubSmall} from './components/GitHubSmall';
 export {default as HideMedium} from './components/HideMedium';
+export {default as HistoryMedium} from './components/HistoryMedium';
 export {default as HistorySmall} from './components/HistorySmall';
 export {default as ImageMedium} from './components/ImageMedium';
 export {default as ImageSmall} from './components/ImageSmall';

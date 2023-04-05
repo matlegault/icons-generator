@@ -64,8 +64,9 @@ export const createIndex = ({
   });
 
   // Write the content to file system
+  const indexHeader = `// -----------------------------------------------------` + '\n' + '// This is a generated index file. Do not edit manually.' + '\n' + `// -----------------------------------------------------` + '\n' + '\n';
   fs.writeFileSync(
     path.resolve(indexDirectoryPath, indexFileName),
-    indexContent
+    indexHeader + indexContent
   );
 };
