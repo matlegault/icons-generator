@@ -103,7 +103,7 @@ exporter
     createIndex({
       componentsDirectoryPath: ICONS_DIRECTORY_PATH,
       indexDirectoryPath: INDEX_DIRECTORY_PATH,
-      indexFileName: "index.tsx"
+      indexFileName: "index.ts"
     });
 
     console.log(chalk.greenBright("-> All done! ✅"));
