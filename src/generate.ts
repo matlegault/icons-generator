@@ -30,13 +30,28 @@ if (
   process.exit(1);
 }
 
+const sizes = {
+  icon: {
+    Small: 16,
+    Medium: 20,
+    Large: 24,
+  },
+  thirdPartyLogo: {
+    Tiny: 16,
+    Small: 32,
+    Medium: 48,
+    Large: 64,
+  },
+};
+
 // 2. Fetch icons metadata from Figma
 console.log(chalk.magentaBright("-> Fetching icons metadata"));
 const exporter = figmaApiExporter(FIGMA_API_TOKEN);
+
 exporter
   .getSvgs({
     fileId: FIGMA_FILE_ID,
-    canvas: FIGMA_CANVAS
+    canvas: FIGMA_CANVAS,
   })
   .then(async (svgsData) => {
     // 3. Download SVG files from Figma
@@ -57,7 +72,7 @@ exporter
       );
       manuallyAddedSvgs.push({
         data: svgData,
-        name: toPascalCase(fileName.replace(/svg/i, ""))
+        name: toPascalCase(fileName.replace(/svg/i, "")),
       });
     });
     const allSVGs = [...downloadedSVGsData, ...manuallyAddedSvgs];
@@ -67,28 +82,35 @@ exporter
     fs.rmSync(ICONS_DIRECTORY_PATH, { recursive: true, force: true }); // remove all old icons
     allSVGs.forEach((svg) => {
       const svgCode = svg.data;
-      const [_, size, artboardName] = svg.name.match(/Size=([^ ]+).*?Type=(.*)$/i); // Get `Type` and `Size` from, example: `Size=Small (16px), Type=Download`
+      const size = svg.name.match(/Size=([^ ]+)/i)[1];
+      const isThirdPartyLogo = svg.name.includes("Brand="); // if it's a third party logo, it will have a `Brand=` in the name
+      const artboardName = isThirdPartyLogo
+        ? svg.name.match(/Brand=([^ ]+)/i)[1]
+        : svg.name.match(/Type=([^ ]+)/i)[1];
+      const mode = svg.name.includes("Mode=")? svg.name.match(/Mode=([^ ]+)/i)[1] : null;
 
-      const sizes = {
-        Small: 16,
-        Medium: 20,
-        Large: 24,
-      } as const;
-      if (!(size in sizes)) throw new Error(`Invalid size ${size}`);
       const svgrConfigWithDimensions = {
         ...svgrConfig,
-        svgProps: {
-          ...svgrConfig.svgProps,
-          width: sizes[size],
-          height: sizes[size]
-        }
+        svgProps: isThirdPartyLogo
+          ? {
+              ...svgrConfig.svgProps,
+              width: sizes.thirdPartyLogo[size],
+              height: sizes.thirdPartyLogo[size],
+            }
+          : {
+              ...svgrConfig.svgProps,
+              width: sizes.icon[size],
+              height: sizes.icon[size],
+            },
       };
 
-      const componentName = toPascalCase(`${artboardName} ${size}`); // rename from e.g. `Size=Small (16px), Type=Download` -> `DownloadSmall`
+      const componentName = toPascalCase(mode? `${artboardName} ${size} ${mode}`:`${artboardName} ${size}`); // rename from e.g. `Size=Small (16px), Type=Download` -> `DownloadSmall`
       const componentFileName = `${componentName}.tsx`;
 
       // Converts SVG code into React code using SVGR library
-      const componentCode = svgr.sync(svgCode, svgrConfigWithDimensions, { componentName });
+      const componentCode = svgr.sync(svgCode, svgrConfigWithDimensions, {
+        componentName,
+      });
 
       // 6. Write generated component to file system
       fs.ensureDirSync(ICONS_DIRECTORY_PATH);
@@ -103,7 +125,7 @@ exporter
     createIndex({
       componentsDirectoryPath: ICONS_DIRECTORY_PATH,
       indexDirectoryPath: INDEX_DIRECTORY_PATH,
-      indexFileName: "index.ts"
+      indexFileName: "index.ts",
     });
 
     console.log(chalk.greenBright("-> All done! ✅"));
@@ -112,3 +134,4 @@ exporter
     console.error(err);
     process.exit(1);
   });
+
