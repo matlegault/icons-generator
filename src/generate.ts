@@ -5,8 +5,10 @@ import chalk from "chalk";
 import dotenv from "dotenv";
 import figmaApiExporter from "figma-api-exporter";
 import svgrConfig from "../svgr.config";
+import svgrConfigThirdParty from "../svgr.config.thirdParty";
 import { createIndex, downloadSVGsData, toPascalCase } from "./utils";
 const svgr = require("@svgr/core").default;
+const prettier = require("prettier");
 
 const ICONS_DIRECTORY_PATH = path.resolve(__dirname, "./icons/components");
 const SVG_DIRECTORY_PATH = path.resolve(__dirname, "./icons/svgs");
@@ -29,6 +31,15 @@ if (
   console.error("Environment Variables not set.");
   process.exit(1);
 }
+
+interface thirdPartyIconData {
+  name: string;
+  lightSvg: string;
+  darkSvg: string;
+  config: object;
+}
+
+let thirdPartyIcons: thirdPartyIconData[] = [];
 
 const sizes = {
   icon: {
@@ -87,36 +98,90 @@ exporter
       const artboardName = isThirdPartyLogo
         ? svg.name.match(/Brand=([^ ]+)/i)[1]
         : svg.name.match(/Type=([^ ]+)/i)[1];
-      const mode = svg.name.includes("Mode=")? svg.name.match(/Mode=([^ ]+)/i)[1] : null;
+      const mode = svg.name.includes("Mode=")
+        ? svg.name.match(/Mode=([^ ]+)/i)[1]
+        : null;
 
-      const svgrConfigWithDimensions = {
-        ...svgrConfig,
-        svgProps: isThirdPartyLogo
-          ? {
-              ...svgrConfig.svgProps,
-              width: sizes.thirdPartyLogo[size],
-              height: sizes.thirdPartyLogo[size],
+      console.log(mode);
+
+      const componentName = toPascalCase(`${artboardName} ${size}`); // rename from e.g. `Size=Small (16px), Type=Download` -> `DownloadSmall`
+
+      if (isThirdPartyLogo) {
+        let thirdPartySvgrConfigWithDimensions = {
+          ...svgrConfigThirdParty,
+          svgProps: {
+            ...svgrConfig.svgProps,
+            width: sizes.thirdPartyLogo[size],
+            height: sizes.thirdPartyLogo[size],
+          },
+        };
+        if (!thirdPartyIcons?.some((icon) => icon.name === componentName)) {
+          thirdPartyIcons.push({
+            name: componentName,
+            lightSvg: "",
+            darkSvg: "",
+            config: thirdPartySvgrConfigWithDimensions,
+          });
+        }
+        thirdPartyIcons = thirdPartyIcons.map((icon) => {
+          if (icon.name === componentName) {
+            if (mode == "Dark,") {
+              icon.darkSvg = svgCode;
+            } else {
+              icon.lightSvg = svgCode;
             }
-          : {
-              ...svgrConfig.svgProps,
-              width: sizes.icon[size],
-              height: sizes.icon[size],
-            },
-      };
+          }
+          return icon;
+        });
+      } else {
+        const componentFileName = `${componentName}.tsx`;
+        let svgrConfigWithDimensions = {
+          ...svgrConfig,
+          svgProps: {
+            ...svgrConfig.svgProps,
+            width: sizes.icon[size],
+            height: sizes.icon[size],
+          },
+        };
+        // Converts SVG code into React code using SVGR library
+        const componentCode = svgr.sync(svgCode, svgrConfigWithDimensions, {
+          componentName,
+        });
 
-      const componentName = toPascalCase(mode? `${artboardName} ${size} ${mode}`:`${artboardName} ${size}`); // rename from e.g. `Size=Small (16px), Type=Download` -> `DownloadSmall`
-      const componentFileName = `${componentName}.tsx`;
+        // 6. Write generated component to file system
+        fs.ensureDirSync(ICONS_DIRECTORY_PATH);
+        fs.outputFileSync(
+          path.resolve(ICONS_DIRECTORY_PATH, componentFileName),
+          componentCode
+        );
+      }
+    });
 
-      // Converts SVG code into React code using SVGR library
-      const componentCode = svgr.sync(svgCode, svgrConfigWithDimensions, {
-        componentName,
+    thirdPartyIcons.forEach((icon) => {
+      const componentFileName = `${icon.name}.tsx`;
+      const lightComponentCode = svgr.sync(icon.lightSvg, icon.config, {
+        componentFileName,
       });
-
-      // 6. Write generated component to file system
+      const darkComponentCode = svgr.sync(icon.darkSvg, icon.config, {
+        componentFileName,
+      });
+      const combinedCode = `
+      import * as React from 'react';
+      import {ThemeModeContext} from 'app/ui/templates/components';
+      const ${icon.name} = (props: React.SVGProps<SVGSVGElement>) => {
+        const {themeMode} = React.useContext(ThemeModeContext);
+        return themeMode === 'default' ? (${lightComponentCode}) : (${darkComponentCode});
+      }
+      export default ${icon.name};
+      `;
+      const formattedCode = prettier.format(
+        combinedCode.replace(/<\/svg>;/g, "</svg>"),
+        { parser: "babel" }
+      );
       fs.ensureDirSync(ICONS_DIRECTORY_PATH);
       fs.outputFileSync(
         path.resolve(ICONS_DIRECTORY_PATH, componentFileName),
-        componentCode
+        formattedCode
       );
     });
 
@@ -134,4 +199,3 @@ exporter
     console.error(err);
     process.exit(1);
   });
-
