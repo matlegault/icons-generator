@@ -1,6 +1,6 @@
 import * as React from "react";
 
-const AvailabilitySmall = (props: React.SVGProps<SVGSVGElement>) => (
+const CompatibilitySmall = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     width={16}
     height={16}
@@ -20,4 +20,4 @@ const AvailabilitySmall = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export default AvailabilitySmall;
+export default CompatibilitySmall;
