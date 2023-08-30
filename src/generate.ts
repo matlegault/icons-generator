@@ -82,11 +82,21 @@ exporter
     fs.rmSync(ICONS_DIRECTORY_PATH, { recursive: true, force: true }); // remove all old icons
     allSVGs.forEach((svg) => {
       const svgCode = svg.data;
-      const size = svg.name.match(/Size=([^ ]+)/i)[1];
+
+      let sizeMatch = svg.name.match(/Size=([^ ]+)/i);
+      let size = sizeMatch ? sizeMatch[1] : null;
+      if (!size) {
+        const dimensions = svgCode.match(/<svg[^>]* width="([^"]+)"[^>]* height="([^"]+)"/i);
+        if (dimensions) {
+          const [_, width, height] = dimensions;
+          size = `${width}x${height}`;
+        }
+      }
+
       const isThirdPartyLogo = svg.name.includes("Brand="); // if it's a third party logo, it will have a `Brand=` in the name
       const artboardName = isThirdPartyLogo
-        ? svg.name.match(/Brand=([^ ]+)/i)[1]
-        : svg.name.match(/Type=([^ ]+)/i)[1];
+        ? svg.name.match(/Brand=([^,]+)/i)[1]
+        : svg.name.match(/Type=([^,]+)/i)[1];
       const mode = svg.name.includes("Mode=")? svg.name.match(/Mode=([^ ]+)/i)[1] : null;
 
       const svgrConfigWithDimensions = {
@@ -97,6 +107,12 @@ exporter
               width: sizes.thirdPartyLogo[size],
               height: sizes.thirdPartyLogo[size],
             }
+          : size && size.includes("x")
+          ? {
+              ...svgrConfig.svgProps,
+              width: size.split("x")[0],
+              height: size.split("x")[1],
+            }
           : {
               ...svgrConfig.svgProps,
               width: sizes.icon[size],
@@ -104,7 +120,16 @@ exporter
             },
       };
 
-      const componentName = toPascalCase(mode? `${artboardName} ${size} ${mode}`:`${artboardName} ${size}`); // rename from e.g. `Size=Small (16px), Type=Download` -> `DownloadSmall`
+      // rename from e.g. `Size=Small (16px), Type=Download, Mode=Light` -> `DownloadSmallLight`
+      // If isThirdPartyLogo is true, the size is included.
+      // If isThirdPartyLogo is false, the size is only included if it exists in sizes.icon and is not equal to the default width in svgrConfig.svgProps
+      // If mode exists, it is included at the end of the component name.
+      const componentName = toPascalCase(
+        mode
+          ? `${toPascalCase(artboardName)}${isThirdPartyLogo ? toPascalCase(size || '') : (sizes.icon[size] && sizes.icon[size] !== svgrConfig.svgProps.width) ? toPascalCase(size || '') : ''}${mode}`
+          : `${toPascalCase(artboardName)}${isThirdPartyLogo ? toPascalCase(size || '') : (sizes.icon[size] && sizes.icon[size] !== svgrConfig.svgProps.width) ? toPascalCase(size || '') : ''}`
+      );
+      
       const componentFileName = `${componentName}.tsx`;
 
       // Converts SVG code into React code using SVGR library

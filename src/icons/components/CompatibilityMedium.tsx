@@ -1,6 +1,6 @@
 import * as React from "react";
 
-const AvailabilityMedium = (props: React.SVGProps<SVGSVGElement>) => (
+const CompatibilityMedium = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     width={20}
     height={20}
@@ -20,4 +20,4 @@ const AvailabilityMedium = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export default AvailabilityMedium;
+export default CompatibilityMedium;
